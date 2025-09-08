@@ -14,8 +14,13 @@
  * limitations under the License.
  **/
 
-#ifndef _VIPER_H_
-#define _VIPER_H_
+#include "help_cmd.h"
 
+namespace viper::option {
 
-#endif
+std::shared_ptr<Command> CreateHelpCommand()
+{
+    return nullptr;
+}
+
+} // namespace viper::option

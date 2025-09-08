@@ -14,10 +14,32 @@
  * limitations under the License.
  **/
 
-#include <iostream>
+#include "option/command.h"
+#include "option/flag.h"
 
-int main()
+#include <cstdio>
+#include <memory>
+
+int main(int argc, char* argv[])
 {
-    std::cout << "Hello, Viper!" << std::endl;
-    return 0;
+    auto rootCmd = std::make_shared<viper::option::Command>();
+
+    rootCmd->_use   = "example";
+    rootCmd->_short = "example cli tool";
+
+    rootCmd->AddFlag(std::make_shared<viper::option::Flag<std::string>>("config", "c", "config file", "config.yaml"));
+    rootCmd->AddFlag(std::make_shared<viper::option::Flag<int>>("port", "p", "listen port", 8080));
+
+    auto versionCmd = std::make_shared<viper::option::Command>();
+
+    versionCmd->_use   = "version";
+    versionCmd->_short = "show version information";
+    versionCmd->_run   = [](int argc, char* argv[]) -> int {
+        printf("\n Hello World, Test Version!\n");
+        return 0;
+    };
+
+    rootCmd->AddCommand(versionCmd);
+
+    return rootCmd->Execute(argc, argv);
 }

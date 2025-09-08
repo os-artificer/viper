@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 project(viper VERSION 1.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -32,7 +32,8 @@ if(NOT DEFINED VERSION)
     set(VERSION "unknown")
 endif()
 
-include_directories(${CMAKE_BINARY_DIR}/../src)
+include_directories(${CMAKE_SOURCE_DIR}/src
+                    ${CMAKE_SOURCE_DIR}/include)
 
 include_directories(/usr/lib
                     /usr/local/include)
@@ -44,3 +45,4 @@ link_directories(/usr/lib
 
 add_subdirectory(src)
 add_subdirectory(example)
+add_subdirectory(viper-tool)
