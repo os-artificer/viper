@@ -20,6 +20,7 @@
 #include "option/flag.h"
 
 #include <functional>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -67,6 +68,9 @@ public:
     RunFunc _run = nullptr;
 
 private:
+    int _flagMaxWith    = 0;
+    int _commandMaxWith = 0;
+
     /// Flags are the flags of this command.
     std::vector<std::shared_ptr<Flag<int>>>         _flagInts;
     std::vector<std::shared_ptr<Flag<bool>>>        _flagBools;
@@ -77,7 +81,7 @@ private:
     std::shared_ptr<Command> _parent = nullptr;
 
     /// SubCmds is the child commands of this command.
-    std::vector<std::shared_ptr<Command>> _subCmds;
+    std::map<std::string, std::shared_ptr<Command>> _subCmds;
 };
 
 } // namespace viper::option
