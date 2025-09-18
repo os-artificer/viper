@@ -35,25 +35,45 @@ Command::~Command()
 }
 
 template <typename T>
-static void PrintFlag(std::shared_ptr<Flag<T>> flag)
+static void PrintFlags(const std::vector<std::shared_ptr<Flag<T>>>& flags)
 {
-    std::cout << "  -" << flag->_shorthand
-              << ", --" << std::left << std::setw(8) << flag->_name
-              << std::right << std::setw(8) << flag->_valueType << " "
-              << std::setw(8) << flag->_usage
-              << " (default: " << flag->_value << ")"
-              << std::endl;
+    for (const auto& flag : flags)
+    {
+        std::cout << "  -" << flag->_shorthand
+                  << ", --" << std::left << std::setw(8) << flag->_name
+                  << std::right << std::setw(8) << flag->_valueType << " "
+                  << std::setw(8) << flag->_usage
+                  << " (default: " << flag->_value << ")"
+                  << std::endl;
+    }
 }
 
 template <>
-void PrintFlag(std::shared_ptr<Flag<bool>> flag)
+void PrintFlags(const std::vector<std::shared_ptr<Flag<bool>>>& flags)
 {
-    std::cout << "  -" << flag->_shorthand
-              << ", --" << std::left << std::setw(8) << flag->_name
-              << std::right << std::setw(8) << flag->_valueType << " "
-              << std::setw(8) << flag->_usage
-              << " (default: " << (flag->_value ? "true" : "false") << ")"
-              << std::endl;
+    for (const auto& flag : flags)
+    {
+        std::cout << "  -" << flag->_shorthand
+                  << ", --" << std::left << std::setw(8) << flag->_name
+                  << std::right << std::setw(8) << flag->_valueType << " "
+                  << std::setw(8) << flag->_usage
+                  << " (default: " << (flag->_value ? "true" : "false") << ")"
+                  << std::endl;
+    }
+}
+
+static void PrintCommands(const std::map<std::string, std::shared_ptr<Command>>& cmds)
+{
+    for (const auto& cmd : cmds)
+    {
+        std::cout << std::left
+                  << std::setw(4)
+                  << " "
+                  << cmd.second->_use
+                  << "\t"
+                  << cmd.second->_short
+                  << std::endl;
+    }
 }
 
 template <>
@@ -108,13 +128,31 @@ void Command::Usage()
     }
 
     // Print the usage message.
+    if (_subCmds.empty() && HasFlags())
+    {
+        return;
+    }
+
     std::cout << "Usage:" << std::endl;
     std::cout << std::left
               << std::setw(4)
               << " "
-              << _use
-              << " [flags] | [command]"
-              << std::endl;
+              << _use;
+
+    if (HasFlags() && !_subCmds.empty())
+    {
+        std::cout << " [flags] | [command]";
+    }
+    else if (_subCmds.empty())
+    {
+        std::cout << " [flags]";
+    }
+    else
+    {
+        std::cout << " [command]";
+    }
+
+    std::cout << std::endl;
 
     // Print the long description.
     if (!_long.empty())
@@ -123,45 +161,34 @@ void Command::Usage()
     }
 
     // Print the subcommands.
-    std::cout << "Commands:" << std::endl;
-    for (const auto& cmd : _subCmds)
+    if (!_subCmds.empty())
     {
-        std::cout << std::left
-                  << std::setw(4)
-                  << " "
-                  << cmd.second->_use
-                  << "\t"
-                  << cmd.second->_short
-                  << std::endl;
+        std::cout << "Commands:" << std::endl;
+        PrintCommands(_subCmds);
     }
 
-    std::cout << "Flags:" << std::endl;
-    for (const auto& flag : _flagInts)
+    if (HasFlags())
     {
-        PrintFlag(flag);
-    }
-
-    for (const auto& flag : _flagBools)
-    {
-        PrintFlag(flag);
-    }
-
-    for (const auto& flag : _flagDoubles)
-    {
-        PrintFlag(flag);
-    }
-
-    for (const auto& flag : _flagStrs)
-    {
-        PrintFlag(flag);
+        std::cout << "Flags:" << std::endl;
+        PrintFlags(_flagInts);
+        PrintFlags(_flagBools);
+        PrintFlags(_flagDoubles);
+        PrintFlags(_flagStrs);
     }
 }
 
 void Command::Help()
 {
     Usage();
-    printf("\nUse \"%s [command] --help\" for more information about a given command.\n",
-           _use.c_str());
+
+    if (!_subCmds.empty())
+    {
+        std::cout << std::endl
+                  << "Use \""
+                  << _use
+                  << " [command] --help\" for more information about a given command."
+                  << std::endl;
+    }
 }
 
 int Command::Execute(int argc, char* argv[])
@@ -180,6 +207,12 @@ int Command::Execute(int argc, char* argv[])
         {
             std::string_view flag = args[i];
             std::string_view value;
+
+            if (flag == "--help")
+            {
+                Help();
+                return 0;
+            }
 
             if (libs::strings::Contains(flag, "="))
             {
@@ -206,6 +239,12 @@ int Command::Execute(int argc, char* argv[])
             std::string_view flag = args[i];
             std::string_view value;
 
+            if (flag == "-h")
+            {
+                Help();
+                return 0;
+            }
+
             if (libs::strings::Contains(flag, "="))
             {
                 auto parts = libs::strings::Split(flag, "=");
@@ -221,12 +260,30 @@ int Command::Execute(int argc, char* argv[])
                 value = args[++i];
             }
 
-            std::cout << "flags: " << flag << " value: " << value << std::endl;
             continue;
         }
 
         // subcommand
         std::string_view cmdName = args[i];
+
+        if (cmdName == "help")
+        {
+            std::string_view value;
+            if (i + 1 < args.size())
+            {
+                value = args[++i];
+            }
+
+            auto it = _subCmds.find(std::string(value));
+            if (it == _subCmds.end())
+            {
+                std::cerr << "Unknown command: " << value << std::endl;
+                return -1;
+            }
+
+            it->second->Help();
+            return 0;
+        }
 
         auto it = _subCmds.find(std::string(cmdName));
         if (it != _subCmds.end())
@@ -248,6 +305,25 @@ int Command::Execute(int argc, char* argv[])
 
     Usage();
     return 0;
+}
+
+void Command::Help(std::string_view cmdName)
+{
+    auto it = _subCmds.find(std::string(cmdName));
+    if (it != _subCmds.end())
+    {
+        auto cmd = it->second;
+        cmd->Usage();
+        return;
+    }
+
+    std::cerr << "Unknown command: " << cmdName << std::endl;
+    Usage();
+}
+
+bool Command::HasFlags()
+{
+    return (!_flagBools.empty() || !_flagStrs.empty() || _flagDoubles.empty() || _flagInts.empty());
 }
 
 } // namespace viper::option

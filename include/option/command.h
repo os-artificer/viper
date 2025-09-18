@@ -54,6 +54,13 @@ public:
     /// Execute the command.
     int Execute(int argc, char* argv[]);
 
+private:
+    /// Print the help message for a subcommand.
+    void Help(std::string_view cmdName);
+
+    /// Check if the flag is empty. 
+    bool HasFlags();
+
 public:
     /// Use is the one-line usage message.
     std::string _use;
