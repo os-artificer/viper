@@ -89,8 +89,12 @@ void Command::AddCommand(std::shared_ptr<Command> cmd)
 
 void Command::Usage()
 {
-    // Print the short description.
-    if (!_short.empty())
+    // Print the description.
+    if (!_long.empty())
+    {
+        std::cout << _long << std::endl;
+    }
+    else if (!_short.empty())
     {
         std::cout << _short << std::endl;
     }
@@ -121,12 +125,6 @@ void Command::Usage()
     }
 
     std::cout << std::endl;
-
-    // Print the long description.
-    if (!_long.empty())
-    {
-        std::cout << _long << std::endl;
-    }
 
     // Print the subcommands.
     if (!_subCmds.empty())
