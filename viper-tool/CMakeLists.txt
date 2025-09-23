@@ -12,4 +12,9 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 
 list(APPEND LIBS viper)
 
+# set macros
+target_compile_definitions(${PROJECT_NAME} PRIVATE "VERSION=\"${VERSION}\"")                                                                             
+target_compile_definitions(${PROJECT_NAME} PRIVATE "GIT_COMMIT_ID=\"${GIT_COMMIT_ID}\"")  
+
+# link libs
 target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBS})

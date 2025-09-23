@@ -14,10 +14,40 @@
  * limitations under the License.
  **/
 
+#include "viper.h"
+
+#include <functional>
 #include <iostream>
 
-int main()
+#ifndef VERSION
+#define VERSION "unknown"
+#endif
+
+#ifndef GIT_COMMIT_ID
+#define GIT_COMMIT_ID ""
+#endif
+
+static int VersionCmd(const viper::option::Args& args)
 {
-    std::cout << "Hello, Viper!" << std::endl;
+    std::cout << "Version: " << VERSION << "\n"
+              << "CommitID: " << GIT_COMMIT_ID << "\n"
+              << std::endl;
+
     return 0;
+}
+
+int main(int argc, char* argv[])
+{
+    auto rootCmd    = std::make_shared<viper::option::Command>();
+    rootCmd->_use   = "viper-tool";
+    rootCmd->_short = "Viper Tool";
+
+    auto versionCmd    = std::make_shared<viper::option::Command>();
+    versionCmd->_use   = "version";
+    versionCmd->_short = "show viper lib version information";
+    versionCmd->_run   = std::bind(VersionCmd, std::placeholders::_1);
+
+    rootCmd->AddCommand(versionCmd);
+
+    return rootCmd->Execute(argc, argv);
 }
