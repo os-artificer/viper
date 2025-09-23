@@ -14,32 +14,63 @@
  * limitations under the License.
  **/
 
-#include "option/command.h"
-#include "option/flag.h"
+#include "option/args.h"
+#include "viper.h"
 
 #include <cstdio>
 #include <memory>
 
 int main(int argc, char* argv[])
 {
+    auto cfgFlag  = std::make_shared<viper::option::Flag<viper::option::Value>>("config", "c", "config file", "config.yaml");
+    auto portFlag = std::make_shared<viper::option::Flag<viper::option::Value>>("port", "p", "listen port", 8080);
+
     auto rootCmd = std::make_shared<viper::option::Command>();
 
     rootCmd->_use   = "example";
     rootCmd->_short = "example cli tool";
 
-    rootCmd->AddFlag(std::make_shared<viper::option::Flag<std::string>>("config", "c", "config file", "config.yaml"));
-    rootCmd->AddFlag(std::make_shared<viper::option::Flag<int>>("port", "p", "listen port", 8080));
+    rootCmd->AddFlag(cfgFlag);
+    rootCmd->AddFlag(portFlag);
+
+    rootCmd->_run = [&](const viper::option::Args& args) -> int {
+        printf("\nHello Root,  argc:%d !\n", args.Count());
+        std::cout << "flag-config: " << cfgFlag->_value << std::endl;
+        std::cout << "flag-port: " << portFlag->_value.GetValue<int>() << std::endl;
+
+        std::cout << "arg-config: " << args.Get("config") << std::endl;
+        std::cout << "arg-port: " << args.Get("port") << std::endl;
+        std::cout << "undefined: " << args.Get("undefined") << std::endl;
+
+        return 0;
+    };
 
     auto versionCmd = std::make_shared<viper::option::Command>();
 
     versionCmd->_use   = "version";
     versionCmd->_short = "show version information";
-    versionCmd->_run   = [](int argc, char* argv[]) -> int {
-        printf("\n Hello World, Test Version!\n");
+    versionCmd->_run   = [](const viper::option::Args& args) -> int {
+        printf("\n Hello World, Test Version, argc:%d !\n", args.Count());
         return 0;
     };
 
     rootCmd->AddCommand(versionCmd);
+
+    auto testCmd = std::make_shared<viper::option::Command>();
+
+    auto testCfgFlag = std::make_shared<viper::option::Flag<viper::option::Value>>("config", "c", "test config file", "test-cfg.yaml");
+
+    testCmd->_use   = "test";
+    testCmd->_short = "example test";
+    testCmd->AddFlag(testCfgFlag);
+
+    testCmd->_run = [](const viper::option::Args& args) -> int {
+        printf("\n Hello World, Example Test, argc:%d !\n", args.Count());
+        std::cout << " Test Cfg File: " << args.Get("config") << std::endl;
+        return 0;
+    };
+
+    rootCmd->AddCommand(testCmd);
 
     return rootCmd->Execute(argc, argv);
 }

@@ -15,12 +15,14 @@
  **/
 
 #include "option/command.h"
-#include "libs/strings/strings.h"
+#include "option/value.h"
+#include "text/strings.h"
 
 #include <algorithm>
 #include <iomanip>
 #include <ios>
 #include <iostream>
+#include <string>
 #include <string_view>
 
 namespace viper::option {
@@ -28,10 +30,7 @@ namespace viper::option {
 Command::~Command()
 {
     _subCmds.clear();
-    _flagBools.clear();
-    _flagDoubles.clear();
-    _flagInts.clear();
-    _flagStrs.clear();
+    _flagVals.clear();
 }
 
 template <typename T>
@@ -44,20 +43,6 @@ static void PrintFlags(const std::vector<std::shared_ptr<Flag<T>>>& flags)
                   << std::right << std::setw(8) << flag->_valueType << " "
                   << std::setw(8) << flag->_usage
                   << " (default: " << flag->_value << ")"
-                  << std::endl;
-    }
-}
-
-template <>
-void PrintFlags(const std::vector<std::shared_ptr<Flag<bool>>>& flags)
-{
-    for (const auto& flag : flags)
-    {
-        std::cout << "  -" << flag->_shorthand
-                  << ", --" << std::left << std::setw(8) << flag->_name
-                  << std::right << std::setw(8) << flag->_valueType << " "
-                  << std::setw(8) << flag->_usage
-                  << " (default: " << (flag->_value ? "true" : "false") << ")"
                   << std::endl;
     }
 }
@@ -77,46 +62,29 @@ static void PrintCommands(const std::map<std::string, std::shared_ptr<Command>>&
 }
 
 template <>
-void Command::AddFlag<int>(std::shared_ptr<Flag<int>> flag)
+void Command::AddFlag<Value>(std::shared_ptr<Flag<Value>> flag)
 {
-    _flagMaxWith = std::max(_flagMaxWith, static_cast<int>(flag->_name.length()));
-
-    flag->_valueType = "int";
-    _flagInts.push_back(flag);
-}
-template <>
-void Command::AddFlag<bool>(std::shared_ptr<Flag<bool>> flag)
-{
-    _flagMaxWith = std::max(_flagMaxWith, static_cast<int>(flag->_name.length()));
-
-    flag->_valueType = "bool";
-    _flagBools.push_back(flag);
-}
-
-template <>
-void Command::AddFlag<double>(std::shared_ptr<Flag<double>> flag)
-{
-    _flagMaxWith = std::max(_flagMaxWith, static_cast<int>(flag->_name.length()));
-
-    flag->_valueType = "double";
-    _flagDoubles.push_back(flag);
-}
-
-template <>
-void Command::AddFlag<std::string>(std::shared_ptr<Flag<std::string>> flag)
-{
-    _flagMaxWith = std::max(_flagMaxWith, static_cast<int>(flag->_name.length()));
-
-    flag->_valueType = "string";
-    _flagStrs.push_back(flag);
+    _flagMaxWith     = std::max(_flagMaxWith, static_cast<int>(flag->_name.length()));
+    flag->_valueType = flag->_value.TypeName();
+    _flagVals.push_back(flag);
 }
 
 void Command::AddCommand(std::shared_ptr<Command> cmd)
 {
-    _commandMaxWith = std::max(_commandMaxWith, static_cast<int>(cmd->_use.length()));
-
+    _commandMaxWith     = std::max(_commandMaxWith, static_cast<int>(cmd->_use.length()));
     cmd->_parent        = shared_from_this();
     _subCmds[cmd->_use] = cmd;
+
+    if (auto it = cmd->_subCmds.find("help"); it == cmd->_subCmds.end())
+    {
+        auto helpCmd = std::make_shared<Command>();
+
+        helpCmd->_use           = "help";
+        helpCmd->_short         = "Help about any command";
+        helpCmd->_parent        = shared_from_this();
+        _commandMaxWith         = std::max(_commandMaxWith, static_cast<int>(helpCmd->_use.length()));
+        _subCmds[helpCmd->_use] = helpCmd;
+    }
 }
 
 void Command::Usage()
@@ -128,12 +96,12 @@ void Command::Usage()
     }
 
     // Print the usage message.
-    if (_subCmds.empty() && HasFlags())
+    if (_subCmds.empty() && !HasFlags())
     {
         return;
     }
 
-    std::cout << "Usage:" << std::endl;
+    std::cout << "\nUsage:" << std::endl;
     std::cout << std::left
               << std::setw(4)
               << " "
@@ -143,7 +111,7 @@ void Command::Usage()
     {
         std::cout << " [flags] | [command]";
     }
-    else if (_subCmds.empty())
+    else if (HasFlags())
     {
         std::cout << " [flags]";
     }
@@ -163,17 +131,14 @@ void Command::Usage()
     // Print the subcommands.
     if (!_subCmds.empty())
     {
-        std::cout << "Commands:" << std::endl;
+        std::cout << "\nCommands:" << std::endl;
         PrintCommands(_subCmds);
     }
 
     if (HasFlags())
     {
-        std::cout << "Flags:" << std::endl;
-        PrintFlags(_flagInts);
-        PrintFlags(_flagBools);
-        PrintFlags(_flagDoubles);
-        PrintFlags(_flagStrs);
+        std::cout << "\nFlags:" << std::endl;
+        PrintFlags(_flagVals);
     }
 }
 
@@ -199,11 +164,18 @@ int Command::Execute(int argc, char* argv[])
         return -1;
     }
 
+    Args runArgs;
+    for (const auto& flagVal : _flagVals)
+    {
+        // set the default value for the flag.
+        runArgs.Set(flagVal->_name, flagVal->_value);
+    }
+
     std::vector<std::string_view> args(argv, argv + argc);
     for (size_t i = 1; i < args.size(); ++i)
     {
         // --option(long option)
-        if (libs::strings::StartWith(args[i], "--"))
+        if (text::StartWith(args[i], "--"))
         {
             std::string_view flag = args[i];
             std::string_view value;
@@ -214,27 +186,51 @@ int Command::Execute(int argc, char* argv[])
                 return 0;
             }
 
-            if (libs::strings::Contains(flag, "="))
+            flag = flag.substr(2);
+
+            if (text::Contains(flag, "="))
             {
-                auto parts = libs::strings::Split(flag, "=");
+                auto parts = text::Split(flag, "=");
                 flag       = parts[0];
                 value      = parts[1];
 
-                std::cout << "flags: " << flag << " value: " << value << std::endl;
+                auto flagVal = FindFlag(flag);
+                if (flagVal == nullptr)
+                {
+                    std::cerr << "Unknow flag: " << flag << std::endl;
+                    return -1;
+                }
+
+                if (!UpdateFlagValue(flagVal, runArgs, std::string(value)))
+                {
+                    return -1;
+                }
+
                 continue;
             }
 
-            if (i + 1 < args.size() && !libs::strings::StartWith(args[i + 1], "-"))
+            if (i + 1 < args.size() && !text::StartWith(args[i + 1], "-"))
             {
                 value = args[++i];
             }
 
-            std::cout << "flags: " << flag << " value: " << value << std::endl;
+            auto flagVal = FindFlag(flag);
+            if (flagVal == nullptr)
+            {
+                std::cerr << "Unknow flag: " << flag << std::endl;
+                return -1;
+            }
+
+            if (!UpdateFlagValue(flagVal, runArgs, std::string(value)))
+            {
+                return -1;
+            }
+
             continue;
         }
 
         // -o (short option)
-        if (libs::strings::StartWith(args[i], "-"))
+        if (text::StartWith(args[i], "-"))
         {
             std::string_view flag = args[i];
             std::string_view value;
@@ -245,19 +241,44 @@ int Command::Execute(int argc, char* argv[])
                 return 0;
             }
 
-            if (libs::strings::Contains(flag, "="))
+            flag = flag.substr(1);
+
+            if (text::Contains(flag, "="))
             {
-                auto parts = libs::strings::Split(flag, "=");
+                auto parts = text::Split(flag, "=");
                 flag       = parts[0];
                 value      = parts[1];
 
-                std::cout << "flags: " << flag << " value: " << value << std::endl;
+                auto flagVal = FindFlag(flag);
+                if (flagVal == nullptr)
+                {
+                    std::cerr << "Unknow flag: " << flag << std::endl;
+                    return -1;
+                }
+
+                if (!UpdateFlagValue(flagVal, runArgs, std::string(value)))
+                {
+                    return -1;
+                }
+
                 continue;
             }
 
-            if (i + 1 < args.size() && !libs::strings::StartWith(args[i + 1], "-"))
+            if (i + 1 < args.size() && !text::StartWith(args[i + 1], "-"))
             {
                 value = args[++i];
+            }
+
+            auto flagVal = FindFlag(flag);
+            if (flagVal == nullptr)
+            {
+                std::cerr << "Unknow flag: " << flag << std::endl;
+                return -1;
+            }
+
+            if (!UpdateFlagValue(flagVal, runArgs, std::string(value)))
+            {
+                return -1;
             }
 
             continue;
@@ -300,11 +321,104 @@ int Command::Execute(int argc, char* argv[])
     // If there is no subcommand, run the command.
     if (_run)
     {
-        return _run(argc, argv);
+        return _run(runArgs);
     }
 
     Usage();
     return 0;
+}
+
+std::shared_ptr<Flag<Value>> Command::FindFlag(std::string_view name)
+{
+    for (const auto& it : _flagVals)
+    {
+        if (it->_name == name || it->_shorthand == name)
+        {
+            return it;
+        }
+    }
+
+    return nullptr;
+}
+
+bool Command::UpdateFlagValue(std::shared_ptr<Flag<Value>> flagVal, Args& args, const std::string& value)
+{
+    if (flagVal->_value.IsString())
+    {
+        flagVal->_value = value;
+        args.Set(flagVal->_name, flagVal->_value);
+        return true;
+    }
+
+    if (flagVal->_value.IsInt())
+    {
+        try
+        {
+            flagVal->_value = std::stoi(value);
+            args.Set(flagVal->_name, flagVal->_value);
+            return true;
+        }
+        catch (...)
+        {
+            std::cerr << "flag: " << flagVal->_name
+                      << " value: " << value
+                      << " errmsg: invalid value" << std::endl;
+            return false;
+        }
+    }
+
+    if (flagVal->_value.IsBool())
+    {
+        try
+        {
+            flagVal->_value = text::ToBool(value);
+            args.Set(flagVal->_name, flagVal->_value);
+            return true;
+        }
+        catch (...)
+        {
+            std::cerr << "flag: " << flagVal->_name
+                      << " value: " << value
+                      << " errmsg: invalid value" << std::endl;
+            return false;
+        }
+    }
+
+    if (flagVal->_value.IsFloat())
+    {
+        try
+        {
+            flagVal->_value = std::stof(value);
+            args.Set(flagVal->_name, flagVal->_value);
+            return true;
+        }
+        catch (...)
+        {
+            std::cerr << "flag: " << flagVal->_name
+                      << " value: " << value
+                      << " errmsg: invalid value" << std::endl;
+            return false;
+        }
+    }
+
+    if (flagVal->_value.IsDouble())
+    {
+        try
+        {
+            flagVal->_value = std::stod(value);
+            args.Set(flagVal->_name, flagVal->_value);
+            return true;
+        }
+        catch (...)
+        {
+            std::cerr << "flag: " << flagVal->_name
+                      << " value: " << value
+                      << " errmsg: invalid value" << std::endl;
+            return false;
+        }
+    }
+
+    return false;
 }
 
 void Command::Help(std::string_view cmdName)
@@ -323,7 +437,7 @@ void Command::Help(std::string_view cmdName)
 
 bool Command::HasFlags()
 {
-    return (!_flagBools.empty() || !_flagStrs.empty() || _flagDoubles.empty() || _flagInts.empty());
+    return !_flagVals.empty();
 }
 
 } // namespace viper::option

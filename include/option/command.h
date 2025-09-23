@@ -17,7 +17,9 @@
 #ifndef _VIPER_OPTION_COMMAND_H_
 #define _VIPER_OPTION_COMMAND_H_
 
-#include "option/flag.h"
+#include "args.h"
+#include "flag.h"
+#include "value.h"
 
 #include <functional>
 #include <map>
@@ -27,7 +29,7 @@
 
 namespace viper::option {
 
-using RunFunc = std::function<int(int argc, char* argv[])>;
+using RunFunc = std::function<int(const Args& args)>;
 
 class Command final : public std::enable_shared_from_this<Command>
 {
@@ -55,10 +57,14 @@ public:
     int Execute(int argc, char* argv[]);
 
 private:
+    /// Find the flag using the flag name or flag short name.
+    std::shared_ptr<Flag<Value>> FindFlag(std::string_view name);
+    bool                         UpdateFlagValue(std::shared_ptr<Flag<Value>> flagVal, Args& args, const std::string& value);
+
     /// Print the help message for a subcommand.
     void Help(std::string_view cmdName);
 
-    /// Check if the flag is empty. 
+    /// Check if the flag is empty.
     bool HasFlags();
 
 public:
@@ -79,10 +85,7 @@ private:
     int _commandMaxWith = 0;
 
     /// Flags are the flags of this command.
-    std::vector<std::shared_ptr<Flag<int>>>         _flagInts;
-    std::vector<std::shared_ptr<Flag<bool>>>        _flagBools;
-    std::vector<std::shared_ptr<Flag<double>>>      _flagDoubles;
-    std::vector<std::shared_ptr<Flag<std::string>>> _flagStrs;
+    std::vector<std::shared_ptr<Flag<Value>>> _flagVals;
 
     /// Parent is the parent of this command.
     std::shared_ptr<Command> _parent = nullptr;

@@ -17,8 +17,8 @@
 #ifndef _VIPER_LIBS_FORMATER_FORMATER_H_
 #define _VIPER_LIBS_FORMATER_FORMATER_H_
 
-namespace viper::libs::formater {
+namespace viper::text {
 
-} // namespace viper::libs::formater
+} // namespace viper::text
 
 #endif

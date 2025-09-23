@@ -14,11 +14,13 @@
  * limitations under the License.
  **/
 
-#include "libs/strings/strings.h"
+#include "text/strings.h"
 
 #include <algorithm>
+#include <cctype>
+#include <stdexcept>
 
-namespace viper::libs::strings {
+namespace viper::text {
 
 bool StartWith(std::string_view sv, std::string_view prefix)
 {
@@ -84,4 +86,31 @@ std::vector<std::string> Split(std::string_view str, std::string_view delimiter)
     return result;
 }
 
-} // namespace viper::libs::strings
+std::string ToLower(const std::string& str)
+{
+    std::string result;
+    for (char c : str)
+    {
+        result += static_cast<char>(tolower(static_cast<unsigned char>(c)));
+    }
+    return result;
+}
+
+bool ToBool(const std::string& str)
+{
+    std::string lowerStr = ToLower(str);
+
+    if (lowerStr == "true" || lowerStr == "1")
+    {
+        return true;
+    }
+    else if (lowerStr == "false" || lowerStr == "0")
+    {
+        return false;
+    }
+    else
+    {
+        throw std::invalid_argument("invalid data: " + str);
+    }
+}
+} // namespace viper::text

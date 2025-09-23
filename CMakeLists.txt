@@ -11,6 +11,10 @@ set(OUTPUT_LIB_DIR ${CMAKE_BINARY_DIR}/lib)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 
+set(CMAKE_INSTALL_PREFIX "/usr/local/os-artificer/viper")
+set(CMAKE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_PREFIX}/include")
+set(CMAKE_INSTALL_LIBDIR "${CMAKE_INSTALL_PREFIX}/lib")
+set(CMAKE_INSTALL_BINDIR "${CMAKE_INSTALL_PREFIX}/bin")
 
 # load custom modules
 # set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
@@ -46,3 +50,18 @@ link_directories(/usr/lib
 add_subdirectory(src)
 add_subdirectory(example)
 add_subdirectory(viper-tool)
+
+# Install public headers
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+        COMPONENT dev)
+
+# Install libs
+install(TARGETS viper
+        LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT runtime
+        ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT dev)
+
+# Install bins
+install(TARGETS viper-tool
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+        COMPONENT runtime)
