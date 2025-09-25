@@ -14,7 +14,7 @@
  * limitations under the License.
  **/
 
-#include "text/strings.h"
+#include "strings.h"
 
 #include <algorithm>
 #include <cctype>

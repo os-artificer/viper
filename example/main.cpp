@@ -14,8 +14,7 @@
  * limitations under the License.
  **/
 
-#include "option/args.h"
-#include "viper.h"
+#include "viper_option.h"
 
 #include <cstdio>
 #include <memory>

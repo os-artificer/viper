@@ -14,4 +14,13 @@
  * limitations under the License.
  **/
 
- #include "text/formater.h"
+#ifndef _VIPER_OPTION_H_
+#define _VIPER_OPTION_H_
+
+#include "option/args.h"
+#include "option/command.h"
+#include "option/flag.h"
+#include "option/value.h"
+#include "text/strings.h"
+
+#endif

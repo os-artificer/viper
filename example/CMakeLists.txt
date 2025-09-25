@@ -10,6 +10,6 @@ list(FILTER SOURCES EXCLUDE REGEX "test")
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-list(APPEND LIBS viper)
+list(APPEND LIBS viper_option)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBS})

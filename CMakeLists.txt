@@ -18,9 +18,15 @@ set(CMAKE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_PREFIX}/include")
 set(CMAKE_INSTALL_LIBDIR "${CMAKE_INSTALL_PREFIX}/lib")
 set(CMAKE_INSTALL_BINDIR "${CMAKE_INSTALL_PREFIX}/bin")
 
+# set the third-party source dir
+set(FETCHCONTENT_BASE_DIR "${CMAKE_SOURCE_DIR}/third-party")
+
+# set the building dir for the third-party source.
+set(FETCHCONTENT_BUILD_DIR "${CMAKE_BINARY_DIR}/third-party/build")
+
 # load custom modules
-# set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
-# find_package()
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+
 
 option(BUILD_DEPENDENCIES "Build denpendencies" OFF)
 option(BUILD_TESTS "Build test cases" OFF)
@@ -59,7 +65,7 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/
         COMPONENT dev)
 
 # Install libs
-install(TARGETS viper viper_shared
+install(TARGETS viper_option viper_option_shared
         LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT runtime
         ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT dev)
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  **/
 
-#include "viper.h"
+#include "viper_option.h"
 
 #include <functional>
 #include <iostream>
