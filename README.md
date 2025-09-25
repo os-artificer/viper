@@ -1,18 +1,20 @@
-# Viper
-A cool toolkit for C++ programmers.
+# Viper-Option
+A cool flag toolkit for C++ programmers.
 
 # Develop Environment
 - gcc-14.2.0(c++17)
 - cmake-3.30.3
+
 # Supported OS
 - Linux
 
 # Features
-- CLI flag kits.
+- [done]  CLI flags parser.
+- [doing] Support YAML configuration file.
 
 # Building
 ``` shell
-git clone https://github.com/os-artificer/viper.git
+git clone https://github.com/os-artificer/viper-option.git
 cd viper
 mkdir build
 cmake ..
